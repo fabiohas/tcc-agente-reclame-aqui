@@ -287,9 +287,9 @@ Cada decisão traz o contexto, a escolha e o que se perde com ela.
 
 ### 5.5 Coleta com navegador automatizado e coleta opcional
 
-**Contexto.** O site usa proteção anti-bot. Um primeiro coletor, baseado em requisições HTTP diretas (`requests`), recebeu erros na listagem de reclamações (seção 9.6). Os termos de uso do Reclame Aqui restringem a coleta automatizada por bots ou qualquer tipo de automação.
+**Contexto.** O site usa proteção anti-bot. Um primeiro scraper, baseado em requisições HTTP diretas (`requests`), recebeu erros na listagem de reclamações (seção 9.6). Os termos de uso do Reclame Aqui restringem a coleta automatizada por bots/scrapers ou qualquer tipo de automação.
 
-**Decisão.** Criar um novo coletor oficial. O [reclameaqui_scraper.py](../reclameaqui_scraper.py) usa Selenium com Chrome headless:
+**Decisão.** Criar um novo scraper. O [reclameaqui_scraper.py](../reclameaqui_scraper.py) usa **Selenium** com **Chrome headless**:
 
 - lê a lista de reclamações **respondidas** (`status=ANSWERED`) e abre cada reclamação num navegador novo;
 - se apresenta com o User-Agent de um Chrome comum e desativa o sinal de automação do navegador (`AutomationControlled`);
@@ -299,12 +299,10 @@ Cada decisão traz o contexto, a escolha e o que se perde com ela.
 
 Uma falha não derruba o pipeline, que segue com os CSVs da landing. A coleta pode ser desligada com `RA_COLETA_ATIVA=false`.
 
-Optou-se pelo segundo coletor porque o primeiro enfrentou problemas na raspagem dos dados por conta das barreiras de verificação do Cloudflare.
-
 **Justificativa da coleta.** A coleta foi feita apesar da restrição dos termos de uso, pelos motivos abaixo:
 
 - **Finalidade acadêmica:** os dados são usados só neste trabalho de conclusão de curso, sem fins comerciais e sem redistribuição da base coletada.
-- **Dados públicos:** as reclamações coletadas são publicadas abertamente no site e podem ser lidas por qualquer visitante, sem login ou cadastro. O coletor lê apenas o que um visitante comum vê; não acessa áreas restritas nem dados de conta.
+- **Dados públicos:** as reclamações coletadas são publicadas abertamente no site e podem ser lidas por qualquer visitante, sem login ou cadastro. O scraper lê apenas o que um visitante comum vê; não acessa áreas restritas nem dados de conta.
 
 Além disso, a coleta tem volume baixo, com pausas entre as páginas, e os dados pessoais são mascarados na prata antes de qualquer análise (seção 5.6). Essa justificativa não substitui uma autorização formal do Reclame Aqui: para qualquer uso além do acadêmico, seria necessário obtê-la.
 
@@ -332,11 +330,11 @@ Além disso, a coleta tem volume baixo, com pausas entre as páginas, e os dados
 
 **Decisão.** O app gera o índice quando a camada ouro muda. O cache é identificado por uma assinatura do modelo, do fatiamento e do texto de cada trecho.
 
-**Consequências.** A imagem do Airflow fica sem o torch (ela já carrega o Chromium do coletor). A primeira pergunta depois de uma atualização dos dados demora mais, enquanto o índice é gerado (cerca de 1 minuto para 100 reclamações em CPU).
+**Consequências.** A imagem do Airflow fica sem o torch (ela já carrega o Chromium do scraper). A primeira pergunta depois de uma atualização dos dados demora mais, enquanto o índice é gerado.
 
 ### 5.9 Avaliação com gabarito calculado dos dados
 
-**Contexto.** Sem um baseline, não dá para saber se uma mudança no prompt ou nas ferramentas melhorou ou piorou o agente.
+**Contexto.** Sem um baseline, não dá para saber se uma mudança no prompt ou nas ferramentas melhorou ou piorou as entregas do agente.
 
 **Decisão.** Um conjunto fixo de perguntas em [avaliacao/casos.py](../avaliacao/casos.py). O gabarito de cada uma é calculado direto dos dados com pandas, sem usar as ferramentas do agente, para a avaliação não ser circular. A correção é automática:
 
@@ -501,7 +499,7 @@ GROUP BY Estado ORDER BY total DESC;
 
 | Risco                                                                 | Probabilidade / impacto                    | Mitigação já implementada                                                                                                                                                      | Plano B                                                                                                                                                       |
 | --------------------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **O site bloqueia o scraping** (403, anti-bot)                  | Alta: já aconteceu com o primeiro coletor | Até 3 tentativas por página; páginas não lidas são descartadas e contadas no resumo (`falhas`); qualquer erro vira status e o DAG segue com os dados da landing            | Exports CSV manuais na landing. O pipeline processa qualquer arquivo no formato, sem mudar código                                                            |
+| **O site bloqueia o scraping** (403, anti-bot)                  | Alta: já aconteceu com o primeiro scraper | Até 3 tentativas por página; páginas não lidas são descartadas e contadas no resumo (`falhas`); qualquer erro vira status e o DAG segue com os dados da landing            | Exports CSV manuais na landing. O pipeline processa qualquer arquivo no formato, sem mudar código                                                            |
 | **O layout do site muda**                                       | Média                                     | Linhas sem ID ou data são descartadas na coleta. As regras de qualidade barram dados malformados. O JSON bruto em `data/bruto/` permite refazer a extração                   | Lote reprovado: a prata anterior continua valendo e o relatório indica o problema. Ajustar os XPaths e as regras de extração em `reclameaqui_scraper.py` |
 | **Lote com dados ruins** (arquivo corrompido, colunas faltando) | Média                                     | Bronze recusa arquivos sem as colunas; linhas inválidas vão para a quarentena; lote acima de 10% de quarentena é reprovado                                                     | Corrigir o arquivo e recolocá-lo na landing. O hash novo faz ele ser reprocessado                                                                            |
 | **API da Anthropic indisponível ou com limite de taxa**        | Baixa / alto no agente                     | Novas tentativas automáticas do SDK; fallback de modelo no servidor; mensagens de erro claras no app. O pipeline não depende da API                                             | Os dados continuam consultáveis direto no DuckDB em SQL. A execução de código pode ser desligada (`USAR_EXECUCAO_CODIGO=false`)                         |
