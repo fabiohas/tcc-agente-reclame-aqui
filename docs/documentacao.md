@@ -1,6 +1,6 @@
 # Agente Reclame Aqui Localiza Meoo
 
-Pipeline de dados e agente analítico para reclamações de clientes da Localiza publicadas no Reclame Aqui. 
+Pipeline de dados e agente analítico para reclamações de clientes da Localiza publicadas no Reclame Aqui.
 
 ## Sumário
 
@@ -52,14 +52,14 @@ Exemplos de decisões:
 > - **Web Mining & Crawler Scraping** (principal): a fonte é um site público, e o acesso aos dados é feito por raspagem das páginas com navegador automatizado.
 > - **Introdução ao Processamento de Dados**: a fonte é caracterizada por formato, volume, crescimento estimado e frequência de atualização.
 
-| Item                      | Descrição                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Origem**          | Reclamações públicas da Localiza no Reclame Aqui (reclameaqui.com.br)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| **Formato**         | CSV com 6 colunas: `titulo`, `ID`, `Data`, `Cidade`, `Estado`, `Texto_Reclamacao` (seção 6). O coletor abre as páginas num navegador automatizado, extrai o texto e grava no mesmo formato                                                                                                                                                                                                                                                                                                                                               |
-| **Volume atual**    | 99 reclamações de 28/08/2026 a 26/09/2026: 195 KB de CSV, 28,6 mil palavras, 18 UFs e 51 cidades                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| **Volume estimado** | No ritmo observado (~3,3 por dia): ~100 por mês e ~1.200 por ano (≈ 2,4 MB de CSV por ano). O volume real da empresa no site pode ser maior. A arquitetura foi pensada para crescer (seção 8)                                                                                                                                                                                                                                                                                                                                                       |
-| **Frequência**     | DAG diário às 06:00 (`0 6 * * *`). As reclamações são publicadas continuamente, então um ciclo diário basta para apoiar decisões semanais                                                                                                                                                                                                                                                                                                                                                                                                     |
-| **Acesso**          | Dois caminhos, que chegam ao mesmo ponto (a pasta `data/landing/`): **(a) scraping** das páginas públicas das reclamações respondidas, com Selenium e Chrome headless ([reclameaqui_scraper.py](../reclameaqui_scraper.py)), que também guarda o texto bruto de cada página em `data/bruto/`; **(b) arquivo CSV** exportado e colocado na landing. A carga atual veio do caminho (b). ⚠️ *Descrever como o export de 17/10/2026 foi obtido (manualmente no site, ferramenta, terceiros) e se os dados são reais ou simulados* |
+| Item                      | Descrição                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Origem**          | Reclamações públicas da Localiza no Reclame Aqui (reclameaqui.com.br)                                                                                                                                                                                                                                                                                                                                     |
+| **Formato**         | CSV com 6 colunas: `titulo`, `ID`, `Data`, `Cidade`, `Estado`, `Texto_Reclamacao` (seção 6). O coletor abre as páginas num navegador automatizado, extrai o texto e grava no mesmo formato                                                                                                                                                                                                    |
+| **Volume atual**    | 99 reclamações de 28/08/2026 a 26/09/2026: 195 KB de CSV, 28,6 mil palavras, 18 UFs e 51 cidades                                                                                                                                                                                                                                                                                                           |
+| **Volume estimado** | No ritmo observado (~3,3 por dia): ~100 por mês e ~1.200 por ano (≈ 2,4 MB de CSV por ano). O volume real da empresa no site pode ser maior. A arquitetura foi pensada para crescer (seção 8)                                                                                                                                                                                                            |
+| **Frequência**     | DAG diário às 06:00 (`0 6 * * *`). As reclamações são publicadas continuamente, então um ciclo diário basta para apoiar decisões semanais                                                                                                                                                                                                                                                          |
+| **Acesso**          | Dois caminhos, que chegam ao mesmo ponto (a pasta `data/landing/`): **(a) scraping** das páginas públicas das reclamações respondidas, com Selenium e Chrome headless ([reclameaqui_scraper.py](../reclameaqui_scraper.py)), que também guarda o texto bruto de cada página em `data/bruto/`; **(b) arquivo CSV** exportado e colocado na landing. A carga atual veio do caminho (b).  |
 
 ## 3. Arquitetura
 
@@ -248,7 +248,7 @@ O modelo só redige a resposta.
 >
 > - **DataOps** (principal): as decisões tratam de carga incremental e idempotente, orquestração, qualidade automatizada, testes e avaliação contínua do pipeline.
 > - **Web Mining & Crawler Scraping**: a seção 5.5 descreve o coletor com navegador automatizado, as pausas, as novas tentativas e a extração dos campos do texto da página.
-> - **Governança de Dados**: a seção 5.6 trata da anonimização exigida pela LGPD e do acesso restrito aos dados originais.
+> - **Governança de Dados**: a seção 5.6 trata da anonimização exigida pela LGPD, acessos restritos aos dados originais e processode quarentena.
 > - **Processamento de Linguagem Natural**: as seções 5.7 a 5.9 tratam da classificação de textos por um modelo de linguagem, do índice semântico e da avaliação com modelo juiz.
 
 Cada decisão traz o contexto, a escolha e o que se perde com ela.
@@ -576,17 +576,8 @@ Distribuição: 12 reclamações em agosto/2026 (a partir do dia 28) e 87 em set
 
 ### 9.6 Tentativa de coleta automática
 
-Em 28/10/2026, o primeiro coletor (requisições HTTP diretas) recebeu **HTTP 403** na página de listagem `https://www.reclameaqui.com.br/empresa/localiza/lista-reclamacoes/`. O `robots.txt` do site permite o caminho, então o bloqueio vem da proteção anti-bot.
+O primeiro scraper (requisições HTTP diretas) recebeu **HTTP 403** na página de listagem `https://www.reclameaqui.com.br/empresa/localiza/lista-reclamacoes/`. O  bloqueio vem da proteção anti-bot da CloudFlare usada pelo Reclame Aqui.
 
-Em 30/10/2026, o coletor com Selenium ([reclameaqui_scraper.py](../reclameaqui_scraper.py)) coletou 5 de 5 reclamações respondidas da primeira página de `localiza-meoo`, em cerca de 1min20. O CSV gerado passou pela bronze e pela prata sem quarentena. Em uma das execuções, o carregamento da lista travou e a tarefa terminou com status `erro`, sem interromper o pipeline (seção 5.5).
+Um segundo scraper com Selenium ([reclameaqui_scraper.py](../reclameaqui_scraper.py)) coletou 5 de 5 reclamações respondidas da primeira página de `localiza-meoo`, em cerca de 1min20. O CSV gerado passou pela bronze e pela prata sem quarentena. Em uma das execuções, o carregamento da lista travou e a tarefa terminou com status `erro`, sem interromper o pipeline (seção 5.5).
 
-No mesmo dia, o fluxo completo do Docker foi testado a partir de uma cópia limpa do repositório (`docker compose up --build`). Dentro do container, o coletor leu 15 de 15 reclamações (3 páginas), o pipeline gerou a ouro com 114 reclamações sem quarentena, o DAG rodou com as 4 tarefas em `success` e o app respondeu a uma pergunta com os mesmos números da tabela ouro.
-
-### 9.7 Como reproduzir as evidências
-
-```bash
-.venv/bin/python -m pipeline.executar --sem-coleta
-duckdb data/ouro/reclamacoes.duckdb "SELECT * FROM execucoes ORDER BY executado_em"
-```
-
-Para o texto do trabalho, vale anexar também prints da interface do Airflow (o grafo do DAG com as tarefas em verde) e do app respondendo a uma pergunta.
+O fluxo completo do Docker foi testado a partir de uma cópia limpa do repositório (`docker compose up --build`). Dentro do container, o coletor leu 15 de 15 reclamações (3 páginas), o pipeline gerou a ouro com 114 reclamações sem quarentena, o DAG rodou com as 4 tarefas em `success` e o app respondeu a uma pergunta com os mesmos números da tabela ouro.
