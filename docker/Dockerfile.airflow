@@ -1,0 +1,15 @@
+# Airflow com as dependências do pipeline (sem torch: o índice semântico é gerado pelo app).
+FROM apache/airflow:3.3.2-python3.12
+
+# Chromium para o coletor (reclameaqui_scraper.py, via Selenium).
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends chromium chromium-driver \
+    && rm -rf /var/lib/apt/lists/*
+USER airflow
+ENV CHROME_BINARY=/usr/bin/chromium \
+    CHROMEDRIVER_PATH=/usr/bin/chromedriver
+
+COPY requirements-pipeline.txt /tmp/requirements-pipeline.txt
+# Fixar o apache-airflow na mesma instalação impede que o pip troque a versão dele.
+RUN pip install --no-cache-dir "apache-airflow==3.3.2" -r /tmp/requirements-pipeline.txt

@@ -1,0 +1,10 @@
+.venv/
+.env
+__pycache__/
+.pytest_cache/
+.DS_Store
+
+# Dados gerados pelo pipeline (a landing com os CSVs de entrada é versionada).
+data/*
+!data/landing/
+data/landing/reclameaqui_*.csv

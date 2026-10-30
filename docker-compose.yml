@@ -1,0 +1,74 @@
+# Sobe tudo com um comando: docker compose up --build
+#   1. pipeline: roda uma vez (coleta -> bronze -> prata -> ouro) e termina
+#   2. airflow e app: sobem depois, com a camada ouro pronta
+# Se a coleta falhar (site fora do ar, bloqueio), o pipeline segue com os CSVs de data/landing/.
+
+# Imagem e configuração comuns ao pipeline e ao Airflow (a imagem já traz o Chromium do coletor).
+x-imagem-pipeline: &imagem-pipeline
+  image: agente-reclame-aqui-airflow
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.airflow
+  user: "${AIRFLOW_UID:-50000}:0"
+  env_file:
+    - path: .env
+      required: false
+
+x-ambiente-pipeline: &ambiente-pipeline
+  DATA_DIR: /opt/projeto/data
+  PYTHONPATH: /opt/projeto
+
+services:
+  pipeline:
+    <<: *imagem-pipeline
+    command: python -m pipeline.executar
+    working_dir: /opt/projeto
+    environment: *ambiente-pipeline
+    volumes:
+      - ./config.py:/opt/projeto/config.py:ro
+      - ./reclameaqui_scraper.py:/opt/projeto/reclameaqui_scraper.py:ro
+      - ./pipeline:/opt/projeto/pipeline:ro
+      - ./data:/opt/projeto/data
+
+  airflow:
+    <<: *imagem-pipeline
+    # standalone = webserver, scheduler e banco SQLite num só container (adequado para desenvolvimento).
+    command: standalone
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully
+    environment:
+      <<: *ambiente-pipeline
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/projeto/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      # Ambiente local: dispensa login na interface. Não use assim em produção.
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
+    volumes:
+      - ./config.py:/opt/projeto/config.py:ro
+      - ./reclameaqui_scraper.py:/opt/projeto/reclameaqui_scraper.py:ro
+      - ./pipeline:/opt/projeto/pipeline:ro
+      - ./dags:/opt/projeto/dags:ro
+      - ./data:/opt/projeto/data
+      - airflow_home:/opt/airflow
+    ports:
+      - "8080:8080"
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      DATA_DIR: /app/data
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8501:8501"
+
+volumes:
+  airflow_home:

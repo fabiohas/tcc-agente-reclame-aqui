@@ -1,0 +1,6 @@
+# Dependências do pipeline (coleta, bronze, prata, ouro). Também instaladas na imagem do Airflow.
+pandas>=2.2
+pyarrow>=16
+duckdb==2.0.0
+pandera==0.35.0
+selenium==4.52.0
